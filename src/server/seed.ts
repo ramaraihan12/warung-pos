@@ -60,6 +60,17 @@ export async function seedHistory(db: Db, days = 7, now = new Date()) {
   const rand = mulberry32(42);
   const catalog = await db.select().from(products);
   if (catalog.length === 0) return 0;
+  // A big delivery just before the first day, so a week of sales does not push shelves below zero.
+  await db.insert(stockMovements).values(
+    catalog.map((p) => ({
+      productId: p.id,
+      delta: 150,
+      kind: 'receive',
+      note: 'kulakan mingguan',
+      createdBy: SEED_USERS[0].id,
+      createdAt: new Date(now.getTime() - (days + 1) * 86_400_000),
+    })),
+  );
   const kasir = SEED_USERS.filter((u) => u.role === 'cashier');
   const deviceIds = kasir.map(() => uuidv7());
   const names = ['Kasir depan', 'Tablet samping'];
