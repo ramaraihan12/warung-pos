@@ -11,7 +11,9 @@ export function assertRupiah(value: number, label = 'amount'): number {
 export function formatRupiah(value: number): string {
   assertRupiah(value);
   const sign = value < 0 ? '-' : '';
-  const digits = Math.abs(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  const digits = Math.abs(value)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return `${sign}Rp ${digits}`;
 }
 

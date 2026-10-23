@@ -64,8 +64,7 @@ export function itemCount(cart: Cart): number {
 }
 
 export type Payment =
-  | { ok: true; paid: number; change: number }
-  | { ok: false; reason: 'empty-cart' | 'short'; shortBy: number };
+  { ok: true; paid: number; change: number } | { ok: false; reason: 'empty-cart' | 'short'; shortBy: number };
 
 /** Cash must cover the total. Change is paid minus total, never negative. */
 export function payCash(total: number, tendered: number): Payment {
