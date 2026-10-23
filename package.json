@@ -21,6 +21,8 @@
     "db:migrate": "tsx --env-file-if-exists=.env scripts/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "user:add": "tsx --env-file-if-exists=.env scripts/add-user.ts",
+    "measure:bundle": "tsx --env-file-if-exists=.env scripts/measure-bundle.ts",
+    "screenshots": "tsx --env-file-if-exists=.env scripts/screenshots.ts",
     "bench:sync": "tsx --env-file-if-exists=.env scripts/bench-sync.ts"
   },
   "dependencies": {
