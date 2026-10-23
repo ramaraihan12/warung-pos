@@ -1,10 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { SyncState } from '@/lib/client/use-sync';
 
-function ago(ms: number | null): string {
+function ago(ms: number | null, now: number): string {
   if (ms === null) return 'belum pernah';
-  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  const s = Math.max(0, Math.round((now - ms) / 1000));
   if (s < 10) return 'baru saja';
   if (s < 60) return `${s} detik lalu`;
   return `${Math.round(s / 60)} menit lalu`;
@@ -19,6 +20,12 @@ export function SyncBanner({
   shellReady: boolean;
   onRetry: () => void;
 }) {
+  // Re-render every few seconds so "last synced" does not freeze.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, []);
   const offline = !state.online;
   const unreachable = state.online && !state.reachable;
   const tone =
@@ -52,7 +59,7 @@ export function SyncBanner({
           Ditolak server: {state.failed}
         </span>
       )}
-      <span className="text-xs opacity-80">Sinkron terakhir: {ago(state.lastSyncAt)}</span>
+      <span className="text-xs opacity-80">Sinkron terakhir: {ago(state.lastSyncAt, now)}</span>
       <span
         className="ml-auto flex items-center gap-3 text-xs"
         data-testid="offline-ready"
