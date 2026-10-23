@@ -38,7 +38,9 @@ function rows<T extends Row>(result: Iterable<T>): T[] {
   return [...result];
 }
 
-const inRange = (r: Range) => sql`s.client_created_at >= ${r.from} and s.client_created_at < ${r.to}`;
+// Dates go in as ISO strings: postgres.js cannot bind a Date inside a raw sql template.
+const inRange = (r: Range) =>
+  sql`s.client_created_at >= ${r.from.toISOString()}::timestamptz and s.client_created_at < ${r.to.toISOString()}::timestamptz`;
 
 export async function summary(db: Db, r: Range) {
   const res = await db.execute<{ sales: number; revenue: number; items: number }>(sql`
