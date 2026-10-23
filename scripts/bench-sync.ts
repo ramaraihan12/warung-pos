@@ -43,6 +43,9 @@ for (let run = 1; run <= runs; run++) {
     () => document.querySelector('[data-testid=pending-count]')?.getAttribute('data-count') === '0',
   );
 
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid=offline-ready]')?.getAttribute('data-ready') === 'true',
+  );
   await context.setOffline(true);
 
   const ids = Array.from({ length: count }, () => uuidv7());
