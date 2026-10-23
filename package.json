@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "next dev -p 3010",
     "build": "next build",
-    "start": "next start -p 3010",
+    "start": "node --env-file-if-exists=.env scripts/serve-standalone.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",

@@ -24,6 +24,8 @@ function createAuth() {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,
     },
+    // On by default in production. The e2e suite logs in many times a second and turns it off.
+    rateLimit: { enabled: process.env.AUTH_RATE_LIMIT !== 'off' },
     plugins: [nextCookies()],
   });
 }
