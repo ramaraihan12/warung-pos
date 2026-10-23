@@ -1,7 +1,5 @@
 // Made-up shop data. "Warung Bu Sri" is not a real shop, and the products carry no brand names.
 
-export const SHOP = { name: 'Warung Bu Sri', address: 'Jl. Diponegoro 12, Salatiga' };
-
 export const SEED_PASSWORD = 'warung123';
 
 export const SEED_USERS = [

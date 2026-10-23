@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, monospace;
+  --color-paper: #f7f5ef;
+  --color-card: #ffffff;
+  --color-ink: #1d2320;
+  --color-muted: #5f6a64;
+  --color-line: #dcd8cc;
+  --color-brand: #1f6f4a;
+  --color-brand-dark: #17543a;
+  --color-brand-soft: #e3f0e8;
+  --color-warn: #8a5a00;
+  --color-warn-soft: #fbf0d4;
+  --color-bad: #a3262a;
+  --color-bad-soft: #fbe3e1;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+input,
+select {
+  background: var(--color-card);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 1px;
+}
+
+/* 58 mm thermal receipt. Everything except the receipt is hidden when printing. */
+.receipt {
+  width: 58mm;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: #000;
+  background: #fff;
+  padding: 3mm;
+}
+
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .receipt,
+  .receipt * {
+    visibility: visible;
+  }
+  .receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 2mm;
+  }
+}

@@ -15,14 +15,12 @@ if (!url) throw new Error('DATABASE_URL is not set');
 const { db, client } = createDb(url, 1);
 const id = randomUUID();
 await db.insert(user).values({ id, name, email: email.toLowerCase(), role, emailVerified: true });
-await db
-  .insert(account)
-  .values({
-    id: randomUUID(),
-    accountId: id,
-    providerId: 'credential',
-    userId: id,
-    password: await hashPassword(password),
-  });
+await db.insert(account).values({
+  id: randomUUID(),
+  accountId: id,
+  providerId: 'credential',
+  userId: id,
+  password: await hashPassword(password),
+});
 await client.end();
 console.log(`created ${role} ${email}`);

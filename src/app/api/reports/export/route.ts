@@ -15,7 +15,20 @@ export async function GET(request: Request) {
   const data = await salesForExport(getDb(), range);
 
   const csv = toCsv(
-    ['sale_id', 'sold_at', 'received_at', 'cashier', 'device', 'method', 'total', 'paid', 'change', 'items', 'clock_skew_ms', 'clock_flagged'],
+    [
+      'sale_id',
+      'sold_at',
+      'received_at',
+      'cashier',
+      'device',
+      'method',
+      'total',
+      'paid',
+      'change',
+      'items',
+      'clock_skew_ms',
+      'clock_flagged',
+    ],
     data.map((r) => [
       r.id,
       r.client_created_at,
