@@ -35,6 +35,8 @@ export function useOfflineShell(): { ready: boolean; supported: boolean } {
 
     void (async () => {
       try {
+        // Ask the browser not to evict the outbox when disk is tight. It may still say no.
+        void navigator.storage?.persist?.();
         await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         const reg = await navigator.serviceWorker.ready;
         // The page may have finished loading before the worker took control, so ask once it is ready.
