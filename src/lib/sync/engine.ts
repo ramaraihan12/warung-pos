@@ -1,4 +1,11 @@
-import { markFailed, markRetry, nextDueAt, selectBatch, type BackoffOptions, type OutboxEntry } from './outbox';
+import {
+  markFailed,
+  markRetry,
+  nextDueAt,
+  selectBatch,
+  type BackoffOptions,
+  type OutboxEntry,
+} from './outbox';
 import type { SaleEvent, SyncResponse } from './protocol';
 
 export interface OutboxStore {

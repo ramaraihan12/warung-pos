@@ -38,7 +38,12 @@ export function selectBatch(entries: OutboxEntry[], now: number, size: number): 
     .slice(0, size);
 }
 
-export function markRetry(entry: OutboxEntry, now: number, error: string, opts?: BackoffOptions): OutboxEntry {
+export function markRetry(
+  entry: OutboxEntry,
+  now: number,
+  error: string,
+  opts?: BackoffOptions,
+): OutboxEntry {
   const attempts = entry.attempts + 1;
   return { ...entry, attempts, nextAttemptAt: now + backoffDelay(attempts, opts), lastError: error };
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { flushOutbox, type OutboxStore } from '@/lib/sync/engine';
-import { backoffDelay, markRetry, newEntry, nextDueAt, selectBatch, type OutboxEntry } from '@/lib/sync/outbox';
+import {
+  backoffDelay,
+  markRetry,
+  newEntry,
+  nextDueAt,
+  selectBatch,
+  type OutboxEntry,
+} from '@/lib/sync/outbox';
 import type { SaleEvent, SyncResponse } from '@/lib/sync/protocol';
 
 function sale(n: number): SaleEvent {
@@ -8,6 +15,7 @@ function sale(n: number): SaleEvent {
   return {
     type: 'sale',
     id,
+    cashierId: 'user-1',
     clientCreatedAt: new Date(1_700_000_000_000 + n * 1000).toISOString(),
     method: 'cash',
     total: 4500,
@@ -193,7 +201,9 @@ describe('flushOutbox', () => {
         }),
     });
     expect(result).toMatchObject({ acked: 2, rejected: 1, retryAt: null });
-    expect([...store.rows.values()]).toMatchObject([{ id: bad, status: 'failed', lastError: 'unknown product' }]);
+    expect([...store.rows.values()]).toMatchObject([
+      { id: bad, status: 'failed', lastError: 'unknown product' },
+    ]);
   });
 
   it('retries an entry the server neither acked nor rejected', async () => {

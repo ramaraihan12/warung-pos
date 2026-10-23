@@ -19,6 +19,8 @@ export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 export const SaleEventSchema = z.object({
   type: z.literal('sale'),
   id: z.uuid(),
+  /** The user who rang the sale up, which can differ from who is logged in when the batch is sent. */
+  cashierId: z.string().min(1).max(100),
   clientCreatedAt: z.iso.datetime(),
   method: PaymentMethodSchema,
   total: rupiah,
