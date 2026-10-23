@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: warung_pos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d warung_pos']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-off: applies the SQL migrations, then exits. It reuses the build stage because the
+  # runtime image carries no dev tools.
+  migrate:
+    build:
+      context: .
+      target: build
+    command: ['pnpm', 'db:migrate']
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/warung_pos
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: 'no'
+
+  app:
+    build: .
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/warung_pos
+      BETTER_AUTH_URL: http://localhost:3010
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?put BETTER_AUTH_SECRET in .env (openssl rand -hex 32)}
+    # Published on loopback only, so the till is not reachable from the rest of the network.
+    ports:
+      - '127.0.0.1:3010:3010'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Optional: docker compose --profile seed run --rm seed
+  seed:
+    profiles: ['seed']
+    build:
+      context: .
+      target: build
+    command: ['pnpm', 'db:seed', '--', '--history']
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/warung_pos
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
