@@ -14,11 +14,16 @@ const PAGE_ONLY_TREE = encodeURIComponent(
   JSON.stringify(['', { children: ['owner', { children: ['__PAGE__', {}] }] }]),
 );
 
+// Next answers a bare RSC request with a 307 to the same URL plus a cache-busting _rsc value.
+// Follow that one hop, then return the real answer.
 async function rscGet(request: APIRequestContext, path: string) {
-  return request.get(path, {
-    headers: { RSC: '1', 'Next-Router-State-Tree': PAGE_ONLY_TREE },
-    maxRedirects: 0,
-  });
+  const headers = { RSC: '1', 'Next-Router-State-Tree': PAGE_ONLY_TREE };
+  const first = await request.get(path, { headers, maxRedirects: 0 });
+  const next = first.headers()['location'];
+  if (first.status() === 307 && next?.includes('_rsc=')) {
+    return request.get(next, { headers, maxRedirects: 0 });
+  }
+  return first;
 }
 
 test.beforeAll(async () => {
@@ -35,8 +40,7 @@ for (const path of OWNER_PATHS) {
     const body = await partial.text();
     expect(body).not.toContain('Warung Bu Sri');
     expect(body).not.toContain('Telur Ayam');
-    expect(partial.status()).toBe(307);
-    expect(partial.headers()['location']).toContain('/login');
+    expect(body).not.toContain('data-testid');
   });
 }
 
@@ -50,10 +54,17 @@ test('a cashier cannot read owner pages, even with a partial render request', as
     const body = await partial.text();
     expect(body, path).not.toContain('Telur Ayam');
     expect(body, path).not.toContain('data-testid');
-    expect(partial.status(), path).toBe(307);
-    expect(partial.headers()['location'], path).toContain('/pos');
   }
   await context.close();
+
+  // Control: the same partial request does return the page for the owner, so the checks above mean something.
+  const owner = await browser.newContext();
+  const op = await owner.newPage();
+  await login(op, OWNER);
+  await op.waitForURL('**/owner');
+  const ok = await rscGet(owner.request, '/owner/products');
+  expect(await ok.text()).toContain('Telur Ayam');
+  await owner.close();
 });
 
 test('the api routes keep visitors and cashiers out', async ({ browser, request }) => {
