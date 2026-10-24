@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db';
+import { BodyTooLargeError, readLimitedText } from '@/server/body';
 import { getApiUser } from '@/server/session';
 import { BadRequestError, processSyncBatch } from '@/server/sync';
 
@@ -11,8 +12,14 @@ export async function POST(request: Request) {
   const user = await getApiUser(request);
   if (!user) return NextResponse.json({ error: 'not logged in' }, { status: 401 });
 
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) return NextResponse.json({ error: 'body too large' }, { status: 413 });
+  let text: string;
+  try {
+    text = await readLimitedText(request, MAX_BODY_BYTES);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError)
+      return NextResponse.json({ error: 'body too large' }, { status: 413 });
+    throw err;
+  }
   let body: unknown;
   try {
     body = JSON.parse(text);
