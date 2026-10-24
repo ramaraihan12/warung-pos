@@ -4,10 +4,12 @@ import { formatRupiah } from '@/lib/money';
 import { listProducts } from '@/server/products';
 import { toggleProduct } from '../actions';
 import { ProductForm } from './product-form';
+import { requirePageUser } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ProductsPage() {
+  await requirePageUser('owner');
   const rows = await listProducts(getDb());
   const categories = [...new Set(rows.map((r) => r.category))];
 

@@ -2,10 +2,12 @@ import { getDb } from '@/db';
 import { Card, td, th, when } from '@/components/ui';
 import { recentMovements, stockLevels } from '@/server/stock';
 import { ReceiveForm } from './receive-form';
+import { requirePageUser } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function StockPage() {
+  await requirePageUser('owner');
   const db = getDb();
   const [levels, movements] = await Promise.all([stockLevels(db), recentMovements(db)]);
   const active = levels.filter((l) => l.active);

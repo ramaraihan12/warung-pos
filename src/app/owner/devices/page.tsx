@@ -1,10 +1,12 @@
 import { getDb } from '@/db';
 import { Card, Empty, td, th, when } from '@/components/ui';
 import { listDevices } from '@/server/reports';
+import { requirePageUser } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DevicesPage() {
+  await requirePageUser('owner');
   const devices = await listDevices(getDb());
   return (
     <div className="space-y-6">

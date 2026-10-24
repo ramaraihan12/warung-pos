@@ -11,6 +11,7 @@ import {
   summary,
   topProducts,
 } from '@/server/reports';
+import { requirePageUser } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,6 +48,7 @@ function Breakdown({
 }
 
 export default async function ReportsPage({ searchParams }: Props) {
+  await requirePageUser('owner');
   const params = await searchParams;
   const range = parseRange(params.from, params.to);
   const db = getDb();

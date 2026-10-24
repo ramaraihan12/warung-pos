@@ -4,10 +4,12 @@ import { Card, Empty, Stat, td, th, when } from '@/components/ui';
 import { formatRupiah } from '@/lib/money';
 import { listDevices, parseRange, skewedSales, summary } from '@/server/reports';
 import { attentionList } from '@/server/stock';
+import { requirePageUser } from '@/server/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function OwnerHome() {
+  await requirePageUser('owner');
   const db = getDb();
   const today = parseRange(undefined, undefined);
   const day = parseRange(today.toDay, today.toDay);
