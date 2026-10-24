@@ -21,7 +21,7 @@ That is the till on my laptop, online. The banner shows the queue is empty. Belo
 
 ![Owner view with one product at minus one in the attention list](docs/attention.png)
 
-That is the result of the second e2e test: two cashiers sold the last unit while offline and both sales landed.
+That is the same scenario as the second e2e test, replayed on the demo data by `pnpm screenshots`: two cashiers sold the last unit while offline and both sales landed.
 
 ## Stack
 
@@ -63,6 +63,24 @@ docker compose --profile seed run --rm seed
 
 The image is `node:24-slim` with Next.js standalone output and runs as the `node` user. A one-off `migrate` service applies the SQL first. The app is published on `127.0.0.1:3010` only, and the database is not published at all.
 
+## Tests
+
+```bash
+pnpm test        # 50 unit tests, plus 16 integration tests when TEST_DATABASE_URL is set
+pnpm build && pnpm test:e2e
+```
+
+Unit tests cover cart math, change, outbox batching and backoff, the flush loop against an in-memory store and catalog delta merging. Integration tests run `/api/sync` logic, stock, catalog deltas, price flags and reports (including totals past 2^31 rupiah) against a real Postgres and skip without `TEST_DATABASE_URL`. The e2e tests use Chromium with `context.setOffline(true)`, which I checked also blocks the service worker's own requests. They run against the production build and the test database, and cover: three offline sales, a reload while offline, a fourth sale on the reloaded page, sync after reconnecting and the owner's report; two devices selling the last unit; the print stylesheet; and an authorization spec that sends partial render requests to every owner page as a visitor and as a cashier and checks no data comes back. CI runs all of it with a Postgres service.
+
+```text
+$ pnpm test:e2e
+Running 10 tests using 1 worker
+(trimmed: one line per test)
+  10 passed (19.6s)
+```
+
+![A 58 mm receipt preview](docs/receipt.png)
+
 ## Offline caching
 
 Serwist has a Turbopack package, but I did not try it. I wanted two things it would hide: the strategy per route, and caching the per-user `/pos` page without a build-time manifest. So `public/sw.js` is about 140 lines and says what it does at the top:
@@ -73,24 +91,6 @@ Serwist has a Turbopack package, but I did not try it. I wanted two things it wo
 - API calls and everything else are not touched. Sync handles its own failures. Signing out clears the cached page.
 
 The first visit is not yet controlled by the worker, so the page sends it the list of files it loaded, and the banner shows "Siap dipakai offline" once the worker confirms the shell is stored. Going offline before that point and reloading fails, and I hit exactly that while writing the benchmark.
-
-## Tests
-
-```bash
-pnpm test        # 47 unit tests, plus 13 integration tests when TEST_DATABASE_URL is set
-pnpm build && pnpm test:e2e
-```
-
-Unit tests cover cart math, change, outbox batching and backoff, the flush loop against an in-memory store and catalog delta merging. Integration tests run `/api/sync` logic, stock, catalog deltas and reports against a real Postgres and skip without `TEST_DATABASE_URL`. The e2e tests use Chromium with `context.setOffline(true)`, which I checked also blocks the service worker's own requests. They run against the production build and the test database, and cover: three offline sales, a reload while offline, sync after reconnecting and the owner's report; two devices selling the last unit; the print stylesheet; and an authorization spec that sends partial render requests to every owner page as a visitor and as a cashier and checks no data comes back. CI runs all of it with a Postgres service.
-
-```text
-$ pnpm test:e2e
-Running 10 tests using 1 worker
-(trimmed: one line per test)
-  10 passed (22.1s)
-```
-
-![A 58 mm receipt preview](docs/receipt.png)
 
 ## Numbers
 
@@ -107,12 +107,11 @@ Real runs on my laptop (Ryzen 9 5900HX, 16 GB, Windows 11), headless Chromium, t
 
 ## Notes
 
-- I have only run this in Chromium, on Windows and in the Docker image. The service worker and IndexedDB paths on Safari and Firefox are untested, and I have not printed to a real thermal printer, only checked that the print stylesheet leaves the receipt at 58 mm.
-- Accounts have no sign-up screen. The cashier id travels inside each sale, so a cashier could attribute a sale to a colleague. It is fine for a shop where everyone knows each other, not for fraud control.
+- I have only run this in Chromium, on Windows and in the Docker image. The service worker and IndexedDB paths on Safari and Firefox are untested, and I have not printed to a real thermal printer, only checked that the print stylesheet leaves the receipt at 58 mm. QRIS is a label on a manual payment: no provider, no webhook, no check that the money arrived.
+- Accounts have no sign-up screen. The server trusts what a device sends: the cashier id, the device id and the price on each line. A cashier could attribute a sale to a colleague or take over another device id, and a sale at a changed price is only flagged on the report page (against the catalog price when the server received it), not refused. It is fine for a shop where everyone knows each other, not for fraud control.
 - A sale keeps the price the device had when it was rung up. If the owner changes a price while a till is offline, that sale keeps the old one. The till does not show stock, only the owner pages do, and only as fresh as the last sync.
 - Catalog versions come from a sequence, and two edits that commit in a different order than they took their numbers could make a device skip one until the row changes again. With one owner editing it is rare. Pulling with a small overlap would fix it.
 - A sale the server rejects (unknown product, totals that do not add up) is parked in IndexedDB and counted in the banner. There is no screen to repair it yet. Browsers can also evict IndexedDB under storage pressure, and the till only asks them not to.
-- QRIS is a label on a manual payment. There is no provider, no webhook and no check that the money arrived.
 - Next: a screen for parked sales, stock count adjustments from the owner pages, and the Background Sync API where it exists.
 
 ## License
