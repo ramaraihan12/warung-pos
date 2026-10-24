@@ -81,13 +81,13 @@ pnpm test        # 47 unit tests, plus 13 integration tests when TEST_DATABASE_U
 pnpm build && pnpm test:e2e
 ```
 
-Unit tests cover cart math, change, outbox batching and backoff, the flush loop against an in-memory store and catalog delta merging. Integration tests run `/api/sync` logic, stock, catalog deltas and reports against a real Postgres and skip without `TEST_DATABASE_URL`. The e2e tests use Chromium with `context.setOffline(true)`, which I checked also blocks the service worker's own requests. They run against the production build and the test database, and cover: three offline sales, a reload while offline, sync after reconnecting and the owner's report; two devices selling the last unit; and the print stylesheet. CI runs all of it with a Postgres service.
+Unit tests cover cart math, change, outbox batching and backoff, the flush loop against an in-memory store and catalog delta merging. Integration tests run `/api/sync` logic, stock, catalog deltas and reports against a real Postgres and skip without `TEST_DATABASE_URL`. The e2e tests use Chromium with `context.setOffline(true)`, which I checked also blocks the service worker's own requests. They run against the production build and the test database, and cover: three offline sales, a reload while offline, sync after reconnecting and the owner's report; two devices selling the last unit; the print stylesheet; and an authorization spec that sends partial render requests to every owner page as a visitor and as a cashier and checks no data comes back. CI runs all of it with a Postgres service.
 
 ```text
 $ pnpm test:e2e
-Running 3 tests using 1 worker
+Running 10 tests using 1 worker
 (trimmed: one line per test)
-  3 passed (18.1s)
+  10 passed (22.1s)
 ```
 
 ![A 58 mm receipt preview](docs/receipt.png)
