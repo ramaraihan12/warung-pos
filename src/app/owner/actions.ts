@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { getDb } from '@/db';
 import { createProduct, ProductInputSchema, setProductActive, updateProduct } from '@/server/products';
 import { requirePageUser } from '@/server/session';
@@ -21,9 +22,12 @@ export async function saveProduct(_prev: FormState, form: FormData): Promise<For
     return { ok: false, message: `${issue?.path.join('.') ?? 'form'}: ${issue?.message ?? 'tidak valid'}` };
   }
   const id = String(form.get('id') ?? '');
+  if (id && !z.uuid().safeParse(id).success) return { ok: false, message: 'Produk tidak ditemukan.' };
   try {
-    if (id) await updateProduct(getDb(), id, parsed.data);
-    else await createProduct(getDb(), parsed.data);
+    if (id) {
+      if (!(await updateProduct(getDb(), id, parsed.data)))
+        return { ok: false, message: 'Produk tidak ditemukan.' };
+    } else await createProduct(getDb(), parsed.data);
   } catch (err) {
     if (isUniqueViolation(err)) return { ok: false, message: 'Kode/SKU itu sudah dipakai produk lain.' };
     throw err;
@@ -34,7 +38,9 @@ export async function saveProduct(_prev: FormState, form: FormData): Promise<For
 
 export async function toggleProduct(form: FormData) {
   await requirePageUser('owner');
-  await setProductActive(getDb(), String(form.get('id')), form.get('active') === 'true');
+  const id = z.uuid().safeParse(String(form.get('id') ?? ''));
+  if (!id.success) return;
+  await setProductActive(getDb(), id.data, form.get('active') === 'true');
   revalidatePath('/owner/products');
 }
 
@@ -43,7 +49,8 @@ export async function receive(_prev: FormState, form: FormData): Promise<FormSta
   const parsed = ReceiveSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success)
     return { ok: false, message: 'Pilih produk dan isi jumlah (bilangan bulat, minimal 1).' };
-  await receiveStock(getDb(), parsed.data, user.id);
+  if (!(await receiveStock(getDb(), parsed.data, user.id)))
+    return { ok: false, message: 'Produk tidak ditemukan.' };
   revalidatePath('/owner/stock');
   revalidatePath('/owner');
   return { ok: true, message: 'Stok masuk dicatat.' };

@@ -38,64 +38,72 @@ function rows<T extends Row>(result: Iterable<T>): T[] {
   return [...result];
 }
 
+// Revenue sums are bigint (a year of sales passes the int4 limit) and postgres.js returns bigint as a string.
+function withRevenue<T extends { revenue: unknown }>(
+  list: T[],
+): (Omit<T, 'revenue'> & { revenue: number })[] {
+  return list.map((r) => ({ ...r, revenue: Number(r.revenue) }));
+}
+
 // Dates go in as ISO strings: postgres.js cannot bind a Date inside a raw sql template.
 const inRange = (r: Range) =>
   sql`s.client_created_at >= ${r.from.toISOString()}::timestamptz and s.client_created_at < ${r.to.toISOString()}::timestamptz`;
 
 export async function summary(db: Db, r: Range) {
-  const res = await db.execute<{ sales: number; revenue: number; items: number }>(sql`
+  const res = await db.execute<{ sales: number; revenue: string; items: number }>(sql`
     select count(*)::int as sales,
-           coalesce(sum(s.total), 0)::int as revenue,
+           coalesce(sum(s.total), 0)::bigint as revenue,
            coalesce(sum((select sum(qty) from sale_items i where i.sale_id = s.id)), 0)::int as items
     from sales s where ${inRange(r)}`);
-  return rows(res)[0] ?? { sales: 0, revenue: 0, items: 0 };
+  const first = withRevenue(rows(res))[0];
+  return first ?? { sales: 0, revenue: 0, items: 0 };
 }
 
 export async function dailyTotals(db: Db, r: Range) {
-  const res = await db.execute<{ day: string; sales: number; revenue: number }>(sql`
+  const res = await db.execute<{ day: string; sales: number; revenue: string }>(sql`
     select to_char(s.client_created_at at time zone ${SHOP_TZ}, 'YYYY-MM-DD') as day,
            count(*)::int as sales,
-           sum(s.total)::int as revenue
+           sum(s.total)::bigint as revenue
     from sales s where ${inRange(r)}
     group by 1 order by 1`);
-  return rows(res);
+  return withRevenue(rows(res));
 }
 
 export async function byMethod(db: Db, r: Range) {
-  const res = await db.execute<{ method: string; sales: number; revenue: number }>(sql`
-    select s.method, count(*)::int as sales, sum(s.total)::int as revenue
+  const res = await db.execute<{ method: string; sales: number; revenue: string }>(sql`
+    select s.method, count(*)::int as sales, sum(s.total)::bigint as revenue
     from sales s where ${inRange(r)}
     group by 1 order by 3 desc`);
-  return rows(res);
+  return withRevenue(rows(res));
 }
 
 export async function topProducts(db: Db, r: Range, limit = 10) {
-  const res = await db.execute<{ name: string; qty: number; revenue: number }>(sql`
-    select p.name, sum(i.qty)::int as qty, sum(i.line_total)::int as revenue
+  const res = await db.execute<{ name: string; qty: number; revenue: string }>(sql`
+    select p.name, sum(i.qty)::int as qty, sum(i.line_total)::bigint as revenue
     from sale_items i
     join sales s on s.id = i.sale_id
     join products p on p.id = i.product_id
     where ${inRange(r)}
     group by p.id, p.name order by 2 desc, 3 desc limit ${limit}`);
-  return rows(res);
+  return withRevenue(rows(res));
 }
 
 export async function byCashier(db: Db, r: Range) {
-  const res = await db.execute<{ name: string; sales: number; revenue: number }>(sql`
-    select u.name, count(*)::int as sales, sum(s.total)::int as revenue
+  const res = await db.execute<{ name: string; sales: number; revenue: string }>(sql`
+    select u.name, count(*)::int as sales, sum(s.total)::bigint as revenue
     from sales s join "user" u on u.id = s.cashier_id
     where ${inRange(r)}
     group by u.id, u.name order by 3 desc`);
-  return rows(res);
+  return withRevenue(rows(res));
 }
 
 export async function byDevice(db: Db, r: Range) {
-  const res = await db.execute<{ name: string; sales: number; revenue: number }>(sql`
-    select d.name, count(*)::int as sales, sum(s.total)::int as revenue
+  const res = await db.execute<{ name: string; sales: number; revenue: string }>(sql`
+    select d.name, count(*)::int as sales, sum(s.total)::bigint as revenue
     from sales s join devices d on d.id = s.device_id
     where ${inRange(r)}
     group by d.id, d.name order by 3 desc`);
-  return rows(res);
+  return withRevenue(rows(res));
 }
 
 /**
@@ -106,8 +114,8 @@ export async function byDevice(db: Db, r: Range) {
 export async function skewedSales(db: Db, r: Range) {
   const res = await db.execute<{
     id: string;
-    client_created_at: Date;
-    received_at: Date;
+    client_created_at: string;
+    received_at: string;
     clock_skew_ms: number;
     device: string;
     total: number;
@@ -119,11 +127,38 @@ export async function skewedSales(db: Db, r: Range) {
   return rows(res);
 }
 
+/** Timestamps come out in shop time (UTC+7, no daylight saving), matching the day buckets on the report page. */
+/**
+ * Lines sold at a price other than the catalog price when the server received them. Usually the
+ * owner changed a price while a till was offline. The server trusts the price on each line, so
+ * this is also where an altered price would show up.
+ */
+export async function priceMismatches(db: Db, r: Range) {
+  const res = await db.execute<{
+    sale_id: string;
+    client_created_at: string;
+    device: string;
+    name: string;
+    qty: number;
+    unit_price: number;
+    catalog_price: number;
+  }>(sql`
+    select s.id as sale_id,
+           to_char(s.client_created_at at time zone ${SHOP_TZ}, 'YYYY-MM-DD"T"HH24:MI:SS') || '+07:00' as client_created_at,
+           d.name as device, i.name, i.qty, i.unit_price, i.catalog_price
+    from sale_items i
+    join sales s on s.id = i.sale_id
+    join devices d on d.id = s.device_id
+    where ${inRange(r)} and i.catalog_price is not null and i.unit_price <> i.catalog_price
+    order by s.client_created_at desc limit 50`);
+  return rows(res);
+}
+
 export async function salesForExport(db: Db, r: Range) {
   const res = await db.execute<{
     id: string;
-    client_created_at: Date;
-    received_at: Date;
+    client_created_at: string;
+    received_at: string;
     cashier: string;
     device: string;
     method: string;
@@ -133,7 +168,10 @@ export async function salesForExport(db: Db, r: Range) {
     items: number;
     clock_skew_ms: number;
   }>(sql`
-    select s.id, s.client_created_at, s.received_at, u.name as cashier, d.name as device,
+    select s.id,
+           to_char(s.client_created_at at time zone ${SHOP_TZ}, 'YYYY-MM-DD"T"HH24:MI:SS') || '+07:00' as client_created_at,
+           to_char(s.received_at at time zone ${SHOP_TZ}, 'YYYY-MM-DD"T"HH24:MI:SS') || '+07:00' as received_at,
+           u.name as cashier, d.name as device,
            s.method, s.total, s.paid, s.change_given,
            (select sum(qty) from sale_items i where i.sale_id = s.id)::int as items,
            s.clock_skew_ms

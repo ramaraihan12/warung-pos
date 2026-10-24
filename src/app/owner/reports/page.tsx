@@ -7,6 +7,7 @@ import {
   byMethod,
   dailyTotals,
   parseRange,
+  priceMismatches,
   skewedSales,
   summary,
   topProducts,
@@ -52,7 +53,7 @@ export default async function ReportsPage({ searchParams }: Props) {
   const params = await searchParams;
   const range = parseRange(params.from, params.to);
   const db = getDb();
-  const [sum, daily, methods, top, cashiers, devices, skewed] = await Promise.all([
+  const [sum, daily, methods, top, cashiers, devices, skewed, mismatches] = await Promise.all([
     summary(db, range),
     dailyTotals(db, range),
     byMethod(db, range),
@@ -60,6 +61,7 @@ export default async function ReportsPage({ searchParams }: Props) {
     byCashier(db, range),
     byDevice(db, range),
     skewedSales(db, range),
+    priceMismatches(db, range),
   ]);
   const max = Math.max(1, ...daily.map((d) => d.revenue));
 
@@ -182,6 +184,42 @@ export default async function ReportsPage({ searchParams }: Props) {
                     {s.clock_skew_ms > 0 ? '+' : '-'}
                     {Math.round(Math.abs(s.clock_skew_ms) / 60000)} menit
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+
+      <Card title="Harga beda dari katalog" className={mismatches.length ? 'border-warn/40' : ''}>
+        <p className="px-4 pt-3 text-xs text-muted">
+          Baris yang dijual dengan harga lain dari harga katalog saat server menerimanya. Biasanya harga
+          diubah ketika kasir sedang offline. Server memercayai harga yang dikirim perangkat, jadi periksa
+          selisih yang tidak masuk akal.
+        </p>
+        {mismatches.length === 0 ? (
+          <Empty>Tidak ada.</Empty>
+        ) : (
+          <table className="mt-2 w-full" data-testid="price-mismatches">
+            <thead>
+              <tr>
+                <th className={th}>Barang</th>
+                <th className={th}>Perangkat</th>
+                <th className={th}>Waktu</th>
+                <th className={`${th} text-right`}>Dijual</th>
+                <th className={`${th} text-right`}>Katalog</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {mismatches.map((m) => (
+                <tr key={`${m.sale_id}-${m.name}`}>
+                  <td className={td}>
+                    {m.qty} x {m.name}
+                  </td>
+                  <td className={td}>{m.device}</td>
+                  <td className={td}>{when(m.client_created_at)}</td>
+                  <td className={`${td} num text-right`}>{formatRupiah(m.unit_price)}</td>
+                  <td className={`${td} num text-right text-muted`}>{formatRupiah(m.catalog_price)}</td>
                 </tr>
               ))}
             </tbody>

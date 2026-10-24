@@ -165,6 +165,8 @@ export const saleItems = pgTable(
     name: text('name').notNull(),
     qty: integer('qty').notNull(),
     unitPrice: integer('unit_price').notNull(),
+    /** The catalog price when the server received the sale, kept so a price that differs can be flagged. */
+    catalogPrice: integer('catalog_price'),
     lineTotal: integer('line_total').notNull(),
   },
   (t) => [primaryKey({ columns: [t.saleId, t.line] }), check('sale_items_qty', sql`${t.qty} > 0`)],

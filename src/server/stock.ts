@@ -77,7 +77,14 @@ export const ReceiveSchema = z.object({
   note: z.string().trim().max(200).optional(),
 });
 
-export async function receiveStock(db: Db, input: z.infer<typeof ReceiveSchema>, userId: string) {
+/** Returns false when no product has that id. */
+export async function receiveStock(
+  db: Db,
+  input: z.infer<typeof ReceiveSchema>,
+  userId: string,
+): Promise<boolean> {
+  const [found] = await db.select({ id: products.id }).from(products).where(eq(products.id, input.productId));
+  if (!found) return false;
   await db.insert(stockMovements).values({
     productId: input.productId,
     delta: input.qty,
@@ -85,6 +92,7 @@ export async function receiveStock(db: Db, input: z.infer<typeof ReceiveSchema>,
     note: input.note || null,
     createdBy: userId,
   });
+  return true;
 }
 
 export async function recentMovements(db: Db, limit = 15) {

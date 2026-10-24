@@ -6,7 +6,18 @@ import { createDb } from '@/db';
 import { products, saleItems, sales, stockMovements } from '@/db/schema';
 import type { SaleEvent } from '@/lib/sync/protocol';
 import { catalogDelta, createProduct, setProductActive, updateProduct } from '@/server/products';
-import { byMethod, dailyTotals, parseRange, skewedSales, summary } from '@/server/reports';
+import {
+  byCashier,
+  byDevice,
+  byMethod,
+  dailyTotals,
+  parseRange,
+  priceMismatches,
+  salesForExport,
+  skewedSales,
+  summary,
+  topProducts,
+} from '@/server/reports';
 import { resetData, seedProducts, seedUsers } from '@/server/seed';
 import { attentionList, receiveStock, stockOf } from '@/server/stock';
 import { SEED_PRODUCTS } from '@/server/seed-data';
@@ -272,5 +283,57 @@ describe.skipIf(!url)('sync and stock against postgres', () => {
       { method: 'cash', sales: 1, revenue: 9000 },
       { method: 'qris', sales: 1, revenue: 4500 },
     ]);
+  });
+
+  it('sums past 2^31 rupiah without overflowing and exports shop-time timestamps', async () => {
+    const rice = await product('8990001001');
+    const big = (at: string) =>
+      saleOf(rice, 1, {
+        clientCreatedAt: at,
+        total: 900_000_000,
+        paid: 900_000_000,
+        items: [{ productId: rice.id, name: rice.name, qty: 1, unitPrice: 900_000_000 }],
+      });
+    const events = [
+      big('2026-03-10T01:00:00.000Z'),
+      big('2026-03-10T02:00:00.000Z'),
+      big('2026-03-10T03:00:00.000Z'),
+    ];
+    await send(events, { sentAt: NOW });
+
+    const range = parseRange('2026-03-10', '2026-03-10', NOW);
+    expect(await summary(db, range)).toMatchObject({ sales: 3, revenue: 2_700_000_000 });
+    expect(await dailyTotals(db, range)).toEqual([{ day: '2026-03-10', sales: 3, revenue: 2_700_000_000 }]);
+    expect((await byMethod(db, range))[0]).toMatchObject({ revenue: 2_700_000_000 });
+    expect((await topProducts(db, range))[0]).toMatchObject({ qty: 3, revenue: 2_700_000_000 });
+    expect((await byCashier(db, range))[0]).toMatchObject({ revenue: 2_700_000_000 });
+    expect(await byDevice(db, range)).toHaveLength(1);
+
+    const [first] = await salesForExport(db, range);
+    expect(first?.client_created_at).toBe('2026-03-10T08:00:00+07:00');
+  });
+
+  it('flags lines sold at a price other than the catalog price', async () => {
+    const rice = await product('8990001001');
+    const cheap = saleOf(rice, 1, {
+      total: 1,
+      paid: 1,
+      items: [{ productId: rice.id, name: rice.name, qty: 1, unitPrice: 1 }],
+    });
+    const normal = saleOf(rice, 1);
+    await send([cheap, normal]);
+
+    const range = parseRange('2026-03-10', '2026-03-10', NOW);
+    const flagged = await priceMismatches(db, range);
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]).toMatchObject({ sale_id: cheap.id, unit_price: 1, catalog_price: rice.price });
+  });
+
+  it('says so when the product id does not exist', async () => {
+    const ghost = uuidv7();
+    expect(await receiveStock(db, { productId: ghost, qty: 1 }, 'user-owner')).toBe(false);
+    expect(await setProductActive(db, ghost, false)).toBe(false);
+    const rice = await product('8990001001');
+    expect(await setProductActive(db, rice.id, true)).toBe(true);
   });
 });

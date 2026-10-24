@@ -57,13 +57,17 @@ export async function processSyncBatch(db: Db, input: ProcessInput): Promise<Syn
 
   // References are checked up front so the insert below cannot half-fail on a foreign key.
   const productIds = [...new Set(valid.flatMap((e) => e.items.map((i) => i.productId)))];
-  const knownProducts = new Set(
+  const catalogPrices = new Map(
     productIds.length === 0
       ? []
-      : (await db.select({ id: products.id }).from(products).where(inArray(products.id, productIds))).map(
-          (r) => r.id,
-        ),
+      : (
+          await db
+            .select({ id: products.id, price: products.price })
+            .from(products)
+            .where(inArray(products.id, productIds))
+        ).map((r) => [r.id, r.price] as const),
   );
+  const knownProducts = new Set(catalogPrices.keys());
   const cashierIds = [...new Set(valid.map((e) => e.cashierId))];
   const knownCashiers = new Set(
     cashierIds.length === 0
@@ -130,6 +134,7 @@ export async function processSyncBatch(db: Db, input: ProcessInput): Promise<Syn
           name: i.name,
           qty: i.qty,
           unitPrice: i.unitPrice,
+          catalogPrice: catalogPrices.get(i.productId) ?? null,
           lineTotal: i.qty * i.unitPrice,
         })),
       ),

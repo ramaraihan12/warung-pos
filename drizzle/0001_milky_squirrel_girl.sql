@@ -1,0 +1,1 @@
+ALTER TABLE "sale_items" ADD COLUMN "catalog_price" integer;

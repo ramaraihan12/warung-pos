@@ -24,19 +24,24 @@ export async function createProduct(db: Db, input: ProductInput) {
   return row;
 }
 
-export async function updateProduct(db: Db, id: string, input: ProductInput) {
-  await db
+/** Returns false when no product has that id. */
+export async function updateProduct(db: Db, id: string, input: ProductInput): Promise<boolean> {
+  const rows = await db
     .update(products)
     .set({ ...input, version: nextVersion })
-    .where(sql`${products.id} = ${id}`);
+    .where(sql`${products.id} = ${id}`)
+    .returning({ id: products.id });
+  return rows.length > 0;
 }
 
 /** Products are never deleted, only switched off, so old sales keep their reference. */
-export async function setProductActive(db: Db, id: string, active: boolean) {
-  await db
+export async function setProductActive(db: Db, id: string, active: boolean): Promise<boolean> {
+  const rows = await db
     .update(products)
     .set({ active, version: nextVersion })
-    .where(sql`${products.id} = ${id}`);
+    .where(sql`${products.id} = ${id}`)
+    .returning({ id: products.id });
+  return rows.length > 0;
 }
 
 export async function listProducts(db: Db) {
