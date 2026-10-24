@@ -12,7 +12,7 @@ import {
 } from '@/lib/cart';
 import { formatRupiah, parseRupiah } from '@/lib/money';
 
-const teh = { id: 'p1', name: 'Teh Botol 450 ml', sku: '8990001', unit: 'botol', unitPrice: 4500 };
+const teh = { id: 'p1', name: 'Teh Manis Botol 450 ml', sku: '8990001', unit: 'botol', unitPrice: 4500 };
 const mie = { id: 'p2', name: 'Mi Instan Goreng', sku: '8990002', unit: 'bungkus', unitPrice: 3200 };
 
 describe('cart math', () => {

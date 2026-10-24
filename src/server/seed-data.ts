@@ -119,7 +119,14 @@ export const SEED_PRODUCTS: Seed[] = [
     price: 22000,
     stock: 10,
   },
-  { sku: '8990003003', name: 'Teh Botol 450 ml', category: 'Minuman', unit: 'botol', price: 4500, stock: 72 },
+  {
+    sku: '8990003003',
+    name: 'Teh Manis Botol 450 ml',
+    category: 'Minuman',
+    unit: 'botol',
+    price: 4500,
+    stock: 72,
+  },
   { sku: '8990003004', name: 'Teh Celup Isi 25', category: 'Minuman', unit: 'kotak', price: 7500, stock: 30 },
   {
     sku: '8990003005',
