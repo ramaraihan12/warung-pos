@@ -80,8 +80,9 @@ export function useSyncLoop(userName: string) {
         await sendHeartbeat(name);
         patch({ reachable: !result.error, ...(result.error ? {} : { lastSyncAt: Date.now() }) });
         if (Date.now() - lastCatalogPull.current > CATALOG_EVERY_MS) {
-          await pullCatalog();
+          // Stamp the attempt, not the success, so a down server is retried every 30 s and not every tick.
           lastCatalogPull.current = Date.now();
+          await pullCatalog();
         }
       };
       // Two tabs of the POS must not flush the same outbox at once.
