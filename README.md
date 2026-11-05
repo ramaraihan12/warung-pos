@@ -4,6 +4,8 @@
 
 A point of sale for a small shop (a warung) that keeps selling when the internet drops and syncs when it comes back. A cashier rings up sales from the keyboard, takes cash or a manual QRIS payment and prints a 58 mm receipt. The owner manages products, receives stock and reads reports. The shop in the demo, Warung Bu Sri in Salatiga, and all of its products and people are made up.
 
+Live demo: https://warung-pos-ashen.vercel.app. Log in as `kasir1@warungbusri.test` for the till or `owner@warungbusri.test` for the reports, both with the password `warung123`. Everyone shares the same made-up shop, so you will see other visitors' sales. The free database sleeps when idle, so the first login after a quiet spell takes a few seconds longer. To try the offline part, wait for "Siap dipakai offline" in the banner, switch the network off in your browser's dev tools and keep selling.
+
 ![The till with a cart, search results and the sync banner](docs/pos.png)
 
 That is the till on my laptop, online. The banner shows the queue is empty. Below is the same till with the network switched off: the sale is already in the queue, nothing is lost, and the banner says so.
