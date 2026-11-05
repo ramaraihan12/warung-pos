@@ -5,6 +5,22 @@ import { getDb, schema } from '@/db';
 
 export type Role = 'owner' | 'cashier';
 
+// The public demo hands every visitor the same logins, so with DEMO_MODE=on nobody can edit or
+// delete those accounts. Better Auth answers 404 for these before it looks at the session.
+const DEMO_LOCKED_PATHS = [
+  '/change-password',
+  '/request-password-reset',
+  '/reset-password',
+  '/update-user',
+  '/change-email',
+  '/verify-email',
+  '/send-verification-email',
+  '/delete-user',
+  '/delete-user/callback',
+  '/link-social',
+  '/unlink-account',
+];
+
 function createAuth() {
   return betterAuth({
     database: drizzleAdapter(getDb(), { provider: 'pg', schema }),
@@ -26,6 +42,7 @@ function createAuth() {
     },
     // On by default in production. The e2e suite logs in many times a second and turns it off.
     rateLimit: { enabled: process.env.AUTH_RATE_LIMIT !== 'off' },
+    disabledPaths: process.env.DEMO_MODE === 'on' ? DEMO_LOCKED_PATHS : [],
     plugins: [nextCookies()],
   });
 }
