@@ -5,8 +5,9 @@ name: demo reset
 # this, and the job also checks where it is running.
 on:
   schedule:
-    # Sunday 19:23 UTC is Monday 02:23 in Jakarta, when nobody is using the till.
-    - cron: '23 19 * * 0'
+    # 19:23 UTC is 02:23 in Jakarta, when nobody is using the till. Daily, because seeded sales are
+    # all in the past and a weekly reset left the 7-day report empty by the end of the week.
+    - cron: '23 19 * * *'
   workflow_dispatch:
 
 permissions:

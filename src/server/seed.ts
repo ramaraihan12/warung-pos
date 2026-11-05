@@ -11,7 +11,7 @@ import { processSyncBatch } from './sync';
 // as an update, not as a second copy next to one the server no longer knows.
 const SEED_PRODUCT_NAMESPACE = '6f1d2c8e-4b7a-4e39-9a52-0d3c7e81b4f6';
 
-/** Empties every app table. Only used on dev and test databases and the weekly demo reset. */
+/** Empties every app table. Only used on dev and test databases and the daily demo reset. */
 export async function resetData(db: Db) {
   await db.execute(sql`
     truncate table sale_items, sales, stock_movements, devices, products,

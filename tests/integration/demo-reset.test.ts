@@ -10,7 +10,7 @@ import { processSyncBatch } from '@/server/sync';
 
 const url = process.env.TEST_DATABASE_URL;
 
-// The public demo runs `db:seed --reset` every week, while browsers keep the catalog they cached.
+// The public demo runs `db:seed --reset` every day, while browsers keep the catalog they cached.
 describe.skipIf(!url)('resetting the shop under a till that cached the catalog', () => {
   const { db, client } = createDb(url ?? 'postgresql://unused', 4);
 
