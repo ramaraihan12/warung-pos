@@ -4,7 +4,7 @@
 
 A point of sale for a small shop (a warung) that keeps selling when the internet drops and syncs when it comes back. A cashier rings up sales from the keyboard, takes cash or a manual QRIS payment and prints a 58 mm receipt. The owner manages products, receives stock and reads reports. The shop in the demo, Warung Bu Sri in Salatiga, and all of its products and people are made up.
 
-Live demo: https://warung-pos-ashen.vercel.app. Log in as `kasir1@warungbusri.test` for the till or `owner@warungbusri.test` for the reports, both with the password `warung123`. Everyone shares the same made-up shop, so you will see other visitors' sales. The free database sleeps when idle, so the first login after a quiet spell takes a few seconds longer. To try the offline part, wait for "Siap dipakai offline" in the banner, switch the network off in your browser's dev tools and keep selling.
+Live demo: https://warung-pos-ashen.vercel.app. Log in as `kasir1@warungbusri.test` for the till or `owner@warungbusri.test` for the reports, both with the password `warung123`. Everyone shares the same made-up shop, so you will see other visitors' sales. The demo resets itself once a week, so nothing you change there lasts. The free database sleeps when idle, so the first login after a quiet spell takes a few seconds longer. To try the offline part, wait for "Siap dipakai offline" in the banner, switch the network off in your browser's dev tools and keep selling.
 
 ![The till with a cart, search results and the sync banner](docs/pos.png)
 
@@ -54,6 +54,7 @@ Till keys: type a name or scan a barcode and press Enter, `3*8990003003` adds th
 | `BETTER_AUTH_SECRET` | empty                     | signs sessions, required in Docker            |
 | `BETTER_AUTH_URL`    | `http://localhost:3010`   | public URL of the app                         |
 | `AUTH_RATE_LIMIT`    | on                        | set to `off` only for the e2e run             |
+| `DEMO_MODE`          | off                       | `on` locks the shared logins on a public demo |
 
 ### Docker
 
@@ -68,7 +69,7 @@ The image is `node:24-slim` with Next.js standalone output and runs as the `node
 ## Tests
 
 ```bash
-pnpm test        # 50 unit tests, plus 16 integration tests when TEST_DATABASE_URL is set
+pnpm test        # 83 unit tests, plus 19 integration tests when TEST_DATABASE_URL is set
 pnpm build && pnpm test:e2e
 ```
 
