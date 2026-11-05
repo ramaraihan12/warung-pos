@@ -1,13 +1,17 @@
 import { hashPassword } from 'better-auth/crypto';
 import { sql } from 'drizzle-orm';
-import { v7 as uuidv7 } from 'uuid';
+import { v5 as uuidv5, v7 as uuidv7 } from 'uuid';
 import type { Db } from '@/db';
 import { account, devices, products, stockMovements, user } from '@/db/schema';
 import type { SaleEvent } from '@/lib/sync/protocol';
 import { SEED_PASSWORD, SEED_PRODUCTS, SEED_USERS } from './seed-data';
 import { processSyncBatch } from './sync';
 
-/** Empties every app table. Only used on dev and test databases. */
+// A seeded product keeps its id through a reset. A till that cached the catalog then gets it back
+// as an update, not as a second copy next to one the server no longer knows.
+const SEED_PRODUCT_NAMESPACE = '6f1d2c8e-4b7a-4e39-9a52-0d3c7e81b4f6';
+
+/** Empties every app table. Only used on dev and test databases and the weekly demo reset. */
 export async function resetData(db: Db) {
   await db.execute(sql`
     truncate table sale_items, sales, stock_movements, devices, products,
@@ -31,7 +35,7 @@ export async function seedUsers(db: Db) {
 export async function seedProducts(db: Db) {
   const owner = SEED_USERS[0].id;
   for (const p of SEED_PRODUCTS) {
-    const id = uuidv7();
+    const id = uuidv5(p.sku, SEED_PRODUCT_NAMESPACE);
     const inserted = await db
       .insert(products)
       .values({ id, sku: p.sku, name: p.name, category: p.category, unit: p.unit, price: p.price })
